@@ -7,11 +7,15 @@
 
 - name: "Debug command output"
   debug:
-    var: _apache_result_mpm_query.stdout_lines
+    var: _apache_result_mpm_query
 
 - name: "Check if MPM is set"
   set_fact:
     mpm_set: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | length > 0 }}"
+
+- name: "Debug if MPM is set"
+  debug:
+    msg: "MPM is set: {{ mpm_set }}"
 
 - name: "Set current MPM"
   ansible.builtin.set_fact:
