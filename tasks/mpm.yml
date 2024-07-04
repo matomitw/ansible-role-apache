@@ -11,11 +11,11 @@
 
 - name: "Check if MPM is set"
   set_fact:
-    mpm_set: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | list | length > 0 }}"
+    mpm_set: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | length > 0 }}"
 
 - name: "Set current MPM"
   ansible.builtin.set_fact:
-    _apache_current_mpm: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | list | first | regex_replace('^Server MPM:\\s+(\\S+)$', '\\1') }}"
+    _apache_current_mpm: "{{ (_apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | list | first).split(':')[1] | trim }}"
   when: mpm_set
 
 - name: "Fail if MPM is not set"
