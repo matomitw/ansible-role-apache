@@ -3,11 +3,25 @@
   ansible.builtin.command:
     cmd: "{{ _apache_cli_command }} -V"
   register: _apache_result_mpm_query
-  changed_when: _apache_result_mpm_query.rc != 0
+  changed_when: false
+
+- name: "Debug command output"
+  debug:
+    var: _apache_result_mpm_query.stdout_lines
+
+- name: "Check if MPM is set"
+  set_fact:
+    mpm_set: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | length > 0 }}"
 
 - name: "Set current MPM"
   ansible.builtin.set_fact:
     _apache_current_mpm: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | first | regex_replace('^Server MPM:\\s+(\\S+)$', '\\1') }}"
+  when: mpm_set
+
+- name: "Fail if MPM is not set"
+  fail:
+    msg: "Could not find 'Server MPM' in the Apache output."
+  when: not mpm_set
 
 - name: "Adding MPM configuration file"
   ansible.builtin.template:
