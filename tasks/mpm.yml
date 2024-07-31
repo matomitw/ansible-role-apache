@@ -3,11 +3,24 @@
   ansible.builtin.command:
     cmd: "{{ _apache_cli_command }} -V"
   register: _apache_result_mpm_query
-  changed_when: _apache_result_mpm_query.rc != 0
+  changed_when: false
+
+- name: "Debug command output"
+  ansible.builtin.debug:
+    var: _apache_result_mpm_query.stdout_lines
 
 - name: "Set current MPM"
   ansible.builtin.set_fact:
-    _apache_current_mpm: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | first | regex_replace('^Server MPM:\\s+(\\S+)$', '\\1') }}"
+    _apache_current_mpm: "{{ _apache_result_mpm_query.stdout_lines | select('search', '^Server MPM:') | list | first | default('') | regex_replace('^Server MPM:\\s+(\\S+)$', '\\1') }}"
+
+- name: "Debug current MPM"
+  ansible.builtin.debug:
+    var: _apache_current_mpm
+
+- name: "Fail if MPM not found"
+  ansible.builtin.fail:
+    msg: "Could not determine current MPM"
+  when: _apache_current_mpm == ''
 
 - name: "Adding MPM configuration file"
   ansible.builtin.template:
@@ -19,7 +32,7 @@
   loop: "{{ _apache_mpm_configs }}"
   notify: Reload apache
 
-- name: "Enabling on redhat based MPM {{ apache_mpm }}"
+- name: "Enabling on RedHat based MPM {{ apache_mpm }}"
   ansible.builtin.template:
     src: "mods-available/redhat/00-mpm.conf.j2"
     dest: "{{ _apache_mods_conf_directory }}/00-mpm.conf"
@@ -29,7 +42,7 @@
   notify: Restart apache
   when: _ansible_os_family == 'redhat'
 
-- name: "Enabling on debian based MPM {{ apache_mpm }}"
+- name: "Enabling on Debian based MPM {{ apache_mpm }}"
   community.general.apache2_module:
     state: "{{ item.state }}"
     name: "{{ item.name }}"
